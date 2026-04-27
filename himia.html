@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>7А сынып - Химия журналы</title>
+    <style>
+        :root {
+            --neon-green: #00ffcc;
+            --gold: #ffd700;
+            --overlay: rgba(15, 23, 42, 0.85);
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            /* Сіз берген фондық сурет */
+            background: url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSn4wAZ1ZBGyECTtuOEE9nvxkGGqBLcgWgR3A&s') no-repeat center center fixed;
+            background-size: cover;
+            color: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .lab-container {
+            background: var(--overlay);
+            backdrop-filter: blur(8px);
+            border: 2px solid var(--neon-green);
+            box-shadow: 0 0 25px rgba(0, 0, 0, 0.7);
+            padding: 30px;
+            border-radius: 20px;
+            width: 95%;
+            max-width: 900px;
+            margin-top: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--neon-green);
+            text-shadow: 0 0 10px rgba(0, 255, 204, 0.5);
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            color: var(--neon-green);
+            border-bottom: 2px solid var(--neon-green);
+            padding: 12px;
+            text-align: left;
+            background: rgba(0, 255, 204, 0.1);
+        }
+
+        td {
+            padding: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--neon-green);
+            color: white;
+            padding: 8px;
+            border-radius: 5px;
+            outline: none;
+        }
+
+        /* Оценка өрісі - 0-ден 10-ға дейін */
+        .score-input {
+            width: 50px;
+            text-align: center;
+            font-weight: bold;
+            color: var(--gold);
+            font-size: 1.1em;
+        }
+
+        .summary-box {
+            margin-top: 25px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-around;
+            border: 1px solid var(--neon-green);
+        }
+
+        .stat-item { text-align: center; }
+        .stat-val {
+            display: block;
+            font-size: 24px;
+            color: var(--gold);
+            font-weight: bold;
+        }
+
+        tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="lab-container">
+        <h1>🧪 7А сынып: Химиялық бағалау (0-10)</h1>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>№</th>
+                    <th>Оқушы есімі</th>
+                    <th>Баға (0-10)</th>
+                    <th>Бағалауды сипатау</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+
+        <div class="summary-box">
+            <div class="stat-item"><span class="stat-val" id="totalCount">0</span>Саны</div>
+            <div class="stat-item"><span class="stat-val" id="totalPoints">0</span>Жалпы балл</div>
+            <div class="stat-item"><span class="stat-val" id="avgPoints">0</span>Орташа баға</div>
+        </div>
+    </div>
+
+    <script>
+        const students = [
+            "Абдіғали Нұрамир", "Абралимова Аяулым", "Абуталип Қорылқа", 
+            "Алауатттдин Нұрай", "Алтынбаев Дархан", "Аманқызы Аружан", 
+            "Даулетбек Алдияр", "Дүйсехан Әлішер", "Ерболұлы Арсен", 
+            "Есмурза Асемай", "Жанузах Мұхаммеджан", "Жұмабай Кебек", 
+            "Мирзаев Азиз", "Орналиева Асел", "Хожалепес Ақниет"
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedData = localStorage.getItem('chem7A_v2');
+            const tbody = document.getElementById('tableBody');
+
+            if (savedData) {
+                const data = JSON.parse(savedData);
+                data.forEach((item, index) => createRow(item.name, index + 1, item.score, item.comment));
+            } else {
+                students.forEach((name, index) => createRow(name, index + 1));
+            }
+            updateStats();
+        });
+
+        function createRow(name, index, score = 0, comment = "") {
+            const tbody = document.getElementById('tableBody');
+            const row = document.createElement('tr');
+
+            row.innerHTML = `
+                <td>${index}</td>
+                <td><strong>${name}</strong></td>
+                <td><input type="number" class="score-input" value="${score}" oninput="saveAndStats()" min="0" max="10"></td>
+                <td><input type="text" value="${comment}" oninput="saveAndStats()" placeholder="Түсініктеме..." style="width: 90%;"></td>
+            `;
+            tbody.appendChild(row);
+        }
+
+        function saveAndStats() {
+            const rows = document.querySelectorAll('#tableBody tr');
+            const data = [];
+            let total = 0;
+            
+            rows.forEach(row => {
+                let score = parseFloat(row.cells[2].querySelector('input').value) || 0;
+                // 10-нан асып кетсе шектеу
+                if (score > 10) { score = 10; row.cells[2].querySelector('input').value = 10; }
+                if (score < 0) { score = 0; row.cells[2].querySelector('input').value = 0; }
+
+                total += score;
+                data.push({
+                    name: row.cells[1].innerText,
+                    score: score,
+                    comment: row.cells[3].querySelector('input').value
+                });
+            });
+
+            localStorage.setItem('chem7A_v2', JSON.stringify(data));
+            
+            document.getElementById('totalCount').innerText = rows.length;
+            document.getElementById('totalPoints').innerText = total;
+            document.getElementById('avgPoints').innerText = (total / rows.length).toFixed(1);
+        }
+
+        function updateStats() {
+            saveAndStats();
+        }
+    </script>
+</body>
+</html>
