@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>7А сынып - Химия журналы</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root {
             --neon-green: #00ffcc;
@@ -13,7 +14,6 @@
 
         body {
             font-family: 'Segoe UI', sans-serif;
-            /* Сіз берген фондық сурет */
             background: url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSn4wAZ1ZBGyECTtuOEE9nvxkGGqBLcgWgR3A&s') no-repeat center center fixed;
             background-size: cover;
             color: #f8fafc;
@@ -41,12 +41,12 @@
             text-align: center;
             color: var(--neon-green);
             text-shadow: 0 0 10px rgba(0, 255, 204, 0.5);
-            margin-bottom: 20px;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
+            margin-bottom: 20px;
         }
 
         th {
@@ -71,42 +71,51 @@
             outline: none;
         }
 
-        /* Оценка өрісі - 0-ден 10-ға дейін */
         .score-input {
             width: 50px;
             text-align: center;
             font-weight: bold;
             color: var(--gold);
-            font-size: 1.1em;
         }
 
         .summary-box {
-            margin-top: 25px;
             padding: 15px;
             background: rgba(0, 0, 0, 0.4);
             border-radius: 12px;
             display: flex;
             justify-content: space-around;
             border: 1px solid var(--neon-green);
+            margin-bottom: 20px;
         }
 
-        .stat-item { text-align: center; }
+        /* QR-код бөлімі */
+        .qr-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(0, 255, 204, 0.3);
+        }
+
+        #qrcode {
+            background: white;
+            padding: 10px;
+            border-radius: 10px;
+        }
+
         .stat-val {
             display: block;
             font-size: 24px;
             color: var(--gold);
             font-weight: bold;
         }
-
-        tr:hover {
-            background: rgba(255, 255, 255, 0.05);
-        }
     </style>
 </head>
 <body>
 
     <div class="lab-container">
-        <h1>🧪 7А сынып: Химиялық бағалау (0-10)</h1>
+        <h1>🧪 7А сынып: Химиялық журнал</h1>
 
         <table>
             <thead>
@@ -114,16 +123,21 @@
                     <th>№</th>
                     <th>Оқушы есімі</th>
                     <th>Баға (0-10)</th>
-                    <th>Бағалауды сипатау</th>
+                    <th>Реакция сипаты</th>
                 </tr>
             </thead>
             <tbody id="tableBody"></tbody>
         </table>
 
         <div class="summary-box">
-            <div class="stat-item"><span class="stat-val" id="totalCount">0</span>Саны</div>
-            <div class="stat-item"><span class="stat-val" id="totalPoints">0</span>Жалпы балл</div>
-            <div class="stat-item"><span class="stat-val" id="avgPoints">0</span>Орташа баға</div>
+            <div style="text-align:center"><span class="stat-val" id="totalCount">0</span>Саны</div>
+            <div style="text-align:center"><span class="stat-val" id="totalPoints">0</span>Жалпы</div>
+            <div style="text-align:center"><span class="stat-val" id="avgPoints">0</span>Орташа</div>
+        </div>
+
+        <div class="qr-section">
+            <p style="color: var(--neon-green); font-size: 14px;">Осы журналға жылдам кіру үшін QR-код:</p>
+            <div id="qrcode"></div>
         </div>
     </div>
 
@@ -137,7 +151,7 @@
         ];
 
         document.addEventListener('DOMContentLoaded', () => {
-            const savedData = localStorage.getItem('chem7A_v2');
+            const savedData = localStorage.getItem('chem7A_final');
             const tbody = document.getElementById('tableBody');
 
             if (savedData) {
@@ -147,17 +161,17 @@
                 students.forEach((name, index) => createRow(name, index + 1));
             }
             updateStats();
+            generateQR();
         });
 
         function createRow(name, index, score = 0, comment = "") {
             const tbody = document.getElementById('tableBody');
             const row = document.createElement('tr');
-
             row.innerHTML = `
                 <td>${index}</td>
                 <td><strong>${name}</strong></td>
                 <td><input type="number" class="score-input" value="${score}" oninput="saveAndStats()" min="0" max="10"></td>
-                <td><input type="text" value="${comment}" oninput="saveAndStats()" placeholder="Түсініктеме..." style="width: 90%;"></td>
+                <td><input type="text" value="${comment}" oninput="saveAndStats()" placeholder="Сипаттама..." style="width: 90%;"></td>
             `;
             tbody.appendChild(row);
         }
@@ -169,10 +183,7 @@
             
             rows.forEach(row => {
                 let score = parseFloat(row.cells[2].querySelector('input').value) || 0;
-                // 10-нан асып кетсе шектеу
-                if (score > 10) { score = 10; row.cells[2].querySelector('input').value = 10; }
-                if (score < 0) { score = 0; row.cells[2].querySelector('input').value = 0; }
-
+                if (score > 10) score = 10;
                 total += score;
                 data.push({
                     name: row.cells[1].innerText,
@@ -181,8 +192,7 @@
                 });
             });
 
-            localStorage.setItem('chem7A_v2', JSON.stringify(data));
-            
+            localStorage.setItem('chem7A_final', JSON.stringify(data));
             document.getElementById('totalCount').innerText = rows.length;
             document.getElementById('totalPoints').innerText = total;
             document.getElementById('avgPoints').innerText = (total / rows.length).toFixed(1);
@@ -190,6 +200,19 @@
 
         function updateStats() {
             saveAndStats();
+        }
+
+        // QR код генерациясы
+        function generateQR() {
+            const currentUrl = window.location.href; // Қазіргі сайттың сілтемесін алады
+            new QRCode(document.getElementById("qrcode"), {
+                text: currentUrl,
+                width: 128,
+                height: 128,
+                colorDark : "#0f172a",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
         }
     </script>
 </body>
